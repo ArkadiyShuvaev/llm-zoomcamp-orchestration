@@ -1,0 +1,79 @@
+services:
+  magic-platform:
+    environment:
+      - ENV=development
+      - PROJECT_NAME=llm
+      - MAGE_CODE_PATH=/home/src
+      - PYTHONPATH=${MAGE_CODE_PATH}/${PROJECT_NAME}:${PYTHONPATH}
+      - POSTGRES_HOST=magic-database
+      - POSTGRES_DB=magic
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - MAGE_DATABASE_CONNECTION_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
+      - DYNAMIC_BLOCKS_VERSION=2
+      - KERNEL_MANAGER=magic
+      - MEMORY_MANAGER_PANDAS_VERSION=2
+      - MEMORY_MANAGER_POLARS_VERSION=2
+      - MEMORY_MANAGER_VERSION=2
+      - VARIABLE_DATA_OUTPUT_META_CACHE=1
+    build:
+      context: ..
+    command: sh -c "/app/run_app.sh mage start $$PROJECT_NAME"
+    ports:
+      - "6789:6789"
+    # volumes:
+      # Mount your local codebase to the container.
+      # - .:/$MAGE_CODE_PATH
+      # Store the data output on local machine to easily debug (optional).
+      # - ~/.mage_data:/$MAGE_CODE_PATH/mage_data
+    restart: on-failure:5
+    # networks:
+    #   - app-network
+    depends_on:
+      - magic-database
+    stdin_open: true # used for interactive debugging
+    tty: true # used for interactive debugging
+
+  magic-database:
+    image: pgvector/pgvector:0.6.0-pg16
+    environment:
+      - ENV=development
+      - PROJECT_NAME=llm
+      - MAGE_CODE_PATH=/home/src
+      - PYTHONPATH=${MAGE_CODE_PATH}/${PROJECT_NAME}:${PYTHONPATH}
+      - POSTGRES_HOST=magic-database
+      - POSTGRES_DB=magic
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - MAGE_DATABASE_CONNECTION_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
+      - DYNAMIC_BLOCKS_VERSION=2
+      - KERNEL_MANAGER=magic
+      - MEMORY_MANAGER_PANDAS_VERSION=2
+      - MEMORY_MANAGER_POLARS_VERSION=2
+      - MEMORY_MANAGER_VERSION=2
+      - VARIABLE_DATA_OUTPUT_META_CACHE=1
+    ports:
+      - "5432:5432"
+    volumes:
+      - ~/.postgres/data:/var/lib/postgresql/data
+      # Custom database initialization scripts (optional).
+      - ./scripts/database:/docker-entrypoint-initdb.d
+    restart: always
+    # networks:
+    #   - app-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    restart: always
+    # networks:
+    #   - app-network
+
+# networks:
+#   app-network:
+#     driver: bridge
